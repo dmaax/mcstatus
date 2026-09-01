@@ -89,6 +89,23 @@ Liveness plus the active cache and rate-limit settings.
 | `MCSTATUS_RATE_LIMIT` | `60` | Requests per window per client IP. `0` disables. |
 | `MCSTATUS_RATE_WINDOW` | `60` | Rate-limit window, in seconds. |
 
+The cache and the rate limiter live in each worker process, so the effective
+limit is per worker rather than per app.
+
+## Deploy
+
+Deployed on [Fly.io](https://fly.io) as `mcstatus` (region `gru`), from the
+`Dockerfile` and `fly.toml` in this repository:
+
+```bash
+fly deploy                 # build and release
+fly logs -a mcstatus
+fly status -a mcstatus
+```
+
+The machine listens on `8080`, runs `shared-cpu-1x` with 256 MB, scales to zero
+when idle, and is health-checked on `/api/health`.
+
 ## Layout
 
 ```
@@ -97,4 +114,5 @@ mcping.py              DNS/SRV, Java SLP, Bedrock RakNet, MOTD parsing
 templates/index.html   Dashboard markup
 static/css/app.css     Design tokens and layout (light + dark)
 static/js/app.js       Dashboard logic and the SVG charts (no dependencies)
+Dockerfile / fly.toml  Deploy configuration
 ```
