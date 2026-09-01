@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minecraft Server Status</title>
+<meta name="description" content="Check any Minecraft server — Java and Bedrock — with SRV, IPv6, MOTD, player counts and latency history.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0b0b'/%3E%3Cpath d='M8 20.5 13 12l4 6 2.5-3.5L24 20.5z' fill='%23fcfcfb'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+<div class="shell">
+
+  <header class="topbar">
+    <div class="wordmark">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="7" rx="2"/><rect x="2" y="13" width="20" height="7" rx="2"/>
+          <path d="M6 7.5h.01M6 16.5h.01"/>
+        </svg>
+      </span>
+      <h1>Minecraft Server Status</h1>
+      <span class="sub">Java &amp; Bedrock</span>
+    </div>
+    <div class="topbar-actions">
+      <button type="button" class="btn btn-ghost btn-icon" id="themeToggle" aria-label="Switch theme" title="Switch theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <form class="search" id="searchForm" autocomplete="off">
+    <label class="field">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+      </svg>
+      <span class="visually-hidden">Server address</span>
+      <input type="text" id="serverInput" name="server" placeholder="play.hypixel.net  ·  host:port  ·  [2001:db8::1]"
+             spellcheck="false" autocapitalize="off" required>
+    </label>
+    <label class="visually-hidden" for="editionSelect">Edition</label>
+    <select class="control" id="editionSelect">
+      <option value="auto">Auto-detect</option>
+      <option value="java">Java</option>
+      <option value="bedrock">Bedrock</option>
+    </select>
+    <button type="submit" class="btn btn-primary" id="checkBtn">Check status</button>
+  </form>
+
+  <div class="recents" id="recents" hidden>
+    <span class="recents-label">Recent</span>
+  </div>
+
+  <div class="progress" id="progress" hidden><span></span></div>
+
+  <main id="results" class="stack">
+
+    <section class="empty" id="emptyState">
+      <h2>Check a server</h2>
+      <p>Enter a Java or Bedrock address. SRV records, IPv6 and custom ports are resolved automatically, and repeat checks build a latency and player history.</p>
+    </section>
+
+    <div class="notice notice-error" id="errorNotice" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/>
+      </svg>
+      <div>
+        <div class="notice-title" id="errorTitle">Something went wrong</div>
+        <div class="notice-body" id="errorBody"></div>
+      </div>
+    </div>
+
+    <section class="card" id="serverCard" hidden>
+      <div class="server">
+        <div class="server-icon" id="serverIcon" aria-hidden="true"></div>
+        <div class="server-id">
+          <h2 id="serverName">—</h2>
+          <div class="server-meta" id="serverMeta"></div>
+        </div>
+        <span class="pill" id="statusPill"></span>
+      </div>
+      <div class="motd" id="motd" hidden></div>
+    </section>
+
+    <section class="tiles" id="tiles" hidden></section>
+
+    <section class="card" id="historyCard" hidden>
+      <div class="card-head">
+        <h2>History</h2>
+        <span class="hint" id="historyHint"></span>
+        <span class="spacer"></span>
+      </div>
+
+      <div class="chart-toolbar">
+        <div class="segmented" role="group" aria-label="Time range" id="rangeGroup">
+          <button type="button" data-range="900" aria-pressed="false">15m</button>
+          <button type="button" data-range="3600" aria-pressed="false">1h</button>
+          <button type="button" data-range="21600" aria-pressed="false">6h</button>
+          <button type="button" data-range="0" aria-pressed="true">All</button>
+        </div>
+        <label class="visually-hidden" for="autoRefresh">Auto refresh</label>
+        <select class="control" id="autoRefresh">
+          <option value="0">Manual refresh</option>
+          <option value="15">Refresh 15s</option>
+          <option value="30" selected>Refresh 30s</option>
+          <option value="60">Refresh 60s</option>
+        </select>
+        <button type="button" class="btn btn-ghost" id="tableToggle" aria-pressed="false">Table view</button>
+        <button type="button" class="btn btn-ghost" id="clearHistory">Clear</button>
+      </div>
+
+      <div class="charts" id="charts"></div>
+
+      <div class="table-wrap" id="historyTable" hidden></div>
+    </section>
+
+    <section class="card" id="playersCard" hidden>
+      <div class="card-head">
+        <h2>Players</h2>
+        <span class="hint" id="playersHint"></span>
+      </div>
+      <div class="players" id="playersList"></div>
+    </section>
+
+    <section class="card" id="detailsCard" hidden>
+      <div class="card-head"><h2>Connection details</h2></div>
+      <div class="table-wrap">
+        <table class="details-table"><tbody id="detailsBody"></tbody></table>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>API</span>
+    <code>GET /api/status?server=play.hypixel.net&amp;edition=auto</code>
+    <span>·</span>
+    <a href="/api/health">health</a>
+  </footer>
+
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
